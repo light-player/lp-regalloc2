@@ -1,5 +1,9 @@
+#[cfg(feature = "ion")]
+use crate::ion::Stats;
+#[cfg(not(feature = "ion"))]
+use crate::ion_stub::Stats;
 use crate::moves::{MoveAndScratchResolver, ParallelMoves};
-use crate::{cfg::CFGInfo, ion::Stats, Allocation, RegAllocError};
+use crate::{cfg::CFGInfo, Allocation, RegAllocError};
 use crate::{ssa::validate_ssa, Edit, Function, MachineEnv, Output, ProgPoint};
 use crate::{
     AllocationKind, Block, FxHashMap, Inst, InstPosition, Operand, OperandConstraint, OperandKind,

@@ -18,6 +18,7 @@ use crate::{Function, MachineEnv, PReg, RegAllocError, RegClass, VecExt};
 pub(crate) mod data_structures;
 pub use data_structures::Ctx;
 pub use data_structures::Stats;
+pub use data_structures::VRegIndex;
 use data_structures::*;
 pub(crate) mod reg_traversal;
 use reg_traversal::*;

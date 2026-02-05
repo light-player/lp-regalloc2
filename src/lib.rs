@@ -36,6 +36,7 @@ macro_rules! trace_enabled {
 }
 
 use alloc::rc::Rc;
+#[cfg(feature = "ion")]
 use allocator_api2::vec::Vec as Vec2;
 use core::ops::Deref as _;
 use core::{hash::BuildHasherDefault, iter::FromIterator};
@@ -47,15 +48,40 @@ pub(crate) mod cfg;
 pub(crate) mod domtree;
 pub(crate) mod fastalloc;
 pub mod indexset;
+#[cfg(feature = "ion")]
 pub(crate) mod ion;
 pub(crate) mod moves;
 pub(crate) mod postorder;
 pub mod ssa;
 
+// Shared utility function used by both ION and moves module
+#[inline(always)]
+pub(crate) fn u64_key(b: u32, a: u32) -> u64 {
+    a as u64 | (b as u64) << 32
+}
+
 #[macro_use]
 mod index;
 
-pub use self::ion::data_structures::Ctx;
+#[cfg(feature = "ion")]
+pub use self::ion::{Ctx, VRegIndex};
+#[cfg(not(feature = "ion"))]
+// VRegIndex stub when ION feature is disabled (used by fastalloc)
+pub use crate::index::VRegIndex;
+#[cfg(not(feature = "ion"))]
+/// Stub Ctx type when ION feature is disabled.
+#[derive(Default)]
+pub struct Ctx {
+    pub output: Output,
+}
+
+// Stub Stats type when ION feature is disabled
+#[cfg(not(feature = "ion"))]
+mod ion_stub {
+    /// Stub Stats type when ION feature is disabled.
+    #[derive(Clone, Debug, Default)]
+    pub struct Stats;
+}
 use alloc::vec::Vec;
 pub use index::{Block, Inst, InstRange};
 
@@ -1570,7 +1596,10 @@ pub struct Output {
     pub debug_locations: Vec<(u32, ProgPoint, ProgPoint, Allocation)>,
 
     /// Internal stats from the allocator.
+    #[cfg(feature = "ion")]
     pub stats: ion::Stats,
+    #[cfg(not(feature = "ion"))]
+    pub stats: ion_stub::Stats,
 }
 
 impl Output {
@@ -1642,6 +1671,8 @@ pub enum RegAllocError {
     /// Too many operands on a single instruction (beyond limit of
     /// 2^16 - 1).
     TooManyOperands,
+    /// Other error (e.g., feature not available).
+    Other(alloc::string::String),
 }
 
 impl core::fmt::Display for RegAllocError {
@@ -1659,10 +1690,17 @@ pub fn run<F: Function>(
     options: &RegallocOptions,
 ) -> Result<Output, RegAllocError> {
     match options.algorithm {
+        #[cfg(feature = "ion")]
         Algorithm::Ion => {
             let mut ctx = Ctx::default();
             run_with_ctx(func, env, options, &mut ctx)?;
             Ok(ctx.output)
+        }
+        #[cfg(not(feature = "ion"))]
+        Algorithm::Ion => {
+            return Err(RegAllocError::Other(
+                "ION algorithm is not available (ion feature is disabled)".into(),
+            ));
         }
         Algorithm::Fastalloc => {
             fastalloc::run(func, env, options.verbose_log, options.validate_ssa)
@@ -1680,7 +1718,14 @@ pub fn run_with_ctx<'a, F: Function>(
     ctx: &'a mut Ctx,
 ) -> Result<&'a Output, RegAllocError> {
     match options.algorithm {
+        #[cfg(feature = "ion")]
         Algorithm::Ion => ion::run(func, env, ctx, options.verbose_log, options.validate_ssa)?,
+        #[cfg(not(feature = "ion"))]
+        Algorithm::Ion => {
+            return Err(RegAllocError::Other(
+                "ION algorithm is not available (ion feature is disabled)".into(),
+            ));
+        }
         Algorithm::Fastalloc => {
             ctx.output = fastalloc::run(func, env, options.verbose_log, options.validate_ssa)?
         }

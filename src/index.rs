@@ -135,6 +135,9 @@ pub trait ContainerComparator {
 
 define_index!(Inst);
 define_index!(Block);
+// VRegIndex is used by fastalloc even when ION is disabled
+#[cfg(not(feature = "ion"))]
+define_index!(VRegIndex);
 
 #[derive(Clone, Copy, Debug)]
 #[cfg_attr(

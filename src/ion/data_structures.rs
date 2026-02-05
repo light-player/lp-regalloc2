@@ -19,7 +19,7 @@ use crate::indexset::IndexSet;
 use crate::Vec2;
 use crate::{
     define_index, Allocation, Block, Bump, Edit, Function, FxHashMap, FxHashSet, MachineEnv,
-    Operand, Output, PReg, ProgPoint, RegClass, VReg,
+    Operand, Output, PReg, ProgPoint, RegClass, VReg, VRegIndex,
 };
 use alloc::collections::BTreeMap;
 use alloc::collections::VecDeque;
@@ -100,6 +100,7 @@ define_index!(LiveBundleIndex, LiveBundles, LiveBundle);
 define_index!(LiveRangeIndex, LiveRanges, LiveRange);
 define_index!(SpillSetIndex, SpillSets, SpillSet);
 define_index!(UseIndex);
+// VRegIndex is used by both ION and Fastalloc, so export it from ion module
 define_index!(VRegIndex, VRegs, VRegData);
 define_index!(PRegIndex);
 define_index!(SpillSlotIndex);
