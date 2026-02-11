@@ -16,11 +16,10 @@ use core::fmt;
 use core::iter::FromIterator;
 use core::ops::{BitAnd, BitOr, Deref, DerefMut, Index, IndexMut, Not};
 
-mod chunked_vec;
 mod iter;
 mod lru;
 mod vregset;
-use chunked_vec::ChunkedVec;
+use crate::chunked_vec::ChunkedVec;
 use iter::*;
 use lru::*;
 use vregset::VRegSet;
@@ -30,16 +29,15 @@ mod tests;
 
 #[derive(Debug)]
 struct Allocs {
-    allocs: Vec<Allocation>,
+    allocs: ChunkedVec<Allocation>,
     /// `inst_alloc_offsets[i]` is the offset into `allocs` for the allocations of
     /// instruction `i`'s operands.
-    inst_alloc_offsets: Vec<u32>,
+    inst_alloc_offsets: ChunkedVec<u32>,
 }
 
 impl Allocs {
     fn new<F: Function>(func: &F) -> (Self, u32) {
-        let mut allocs = Vec::new();
-        let mut inst_alloc_offsets = Vec::with_capacity(func.num_insts());
+        let mut inst_alloc_offsets = ChunkedVec::new();
         let mut max_operand_len = 0;
         let mut no_of_operands = 0;
         for inst in 0..func.num_insts() {
@@ -48,7 +46,8 @@ impl Allocs {
             inst_alloc_offsets.push(no_of_operands as u32);
             no_of_operands += operands_len;
         }
-        allocs.resize(no_of_operands as usize, Allocation::none());
+        let allocs =
+            ChunkedVec::with_capacity_and_default(no_of_operands as usize, Allocation::none());
         (
             Self {
                 allocs,
@@ -432,7 +431,7 @@ pub struct Env<'a, F: Function> {
     init_available_pregs: PRegSet,
     allocatable_regs: PRegSet,
     preferred_victim: PartedByRegClass<PReg>,
-    vreg_to_live_inst_range: Vec<(ProgPoint, ProgPoint, Allocation)>,
+    vreg_to_live_inst_range: ChunkedVec<(ProgPoint, ProgPoint, Allocation)>,
 
     fixed_stack_slots: PRegSet,
 
@@ -492,14 +491,14 @@ impl<'a, F: Function> Env<'a, F> {
             allocatable_regs,
             live_vregs: VRegSet::with_capacity(func.num_vregs()),
             fixed_stack_slots,
-            vreg_to_live_inst_range: vec![
+            vreg_to_live_inst_range: ChunkedVec::with_capacity_and_default(
+                func.num_vregs(),
                 (
                     ProgPoint::invalid(),
                     ProgPoint::invalid(),
-                    Allocation::none()
-                );
-                func.num_vregs()
-            ],
+                    Allocation::none(),
+                ),
+            ),
             preferred_victim: PartedByRegClass {
                 items: [
                     regs[0].max_preg().unwrap_or(PReg::invalid()),
@@ -1644,8 +1643,8 @@ pub fn run<F: Function>(
 
     Ok(Output {
         edits: env.state.edits,
-        allocs: env.allocs.allocs,
-        inst_alloc_offsets: env.allocs.inst_alloc_offsets,
+        allocs: env.allocs.allocs.iter().cloned().collect(),
+        inst_alloc_offsets: env.allocs.inst_alloc_offsets.iter().cloned().collect(),
         num_spillslots: env.state.stack.num_spillslots as usize,
         debug_locations: env.debug_locations,
         stats: env.stats,
