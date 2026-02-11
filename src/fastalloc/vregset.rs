@@ -1,8 +1,8 @@
 use core::fmt;
 
 use crate::{VReg, VRegIndex};
-use alloc::vec;
-use alloc::vec::Vec;
+
+use super::chunked_vec::ChunkedVec;
 
 #[derive(Clone)]
 struct VRegNode {
@@ -14,22 +14,21 @@ struct VRegNode {
 // Using a doubly linked list here for fast insertion,
 // removal and iteration.
 pub struct VRegSet {
-    items: Vec<VRegNode>,
+    items: ChunkedVec<VRegNode>,
     head: VRegIndex,
 }
 
 impl VRegSet {
     pub fn with_capacity(num_vregs: usize) -> Self {
+        let head = VRegIndex::new(num_vregs);
+        let default = VRegNode {
+            prev: head,
+            next: head,
+            vreg: VReg::invalid(),
+        };
         Self {
-            items: vec![
-                VRegNode {
-                    prev: VRegIndex::new(num_vregs),
-                    next: VRegIndex::new(num_vregs),
-                    vreg: VReg::invalid()
-                };
-                num_vregs + 1
-            ],
-            head: VRegIndex::new(num_vregs),
+            items: ChunkedVec::with_capacity_and_default(num_vregs + 1, default),
+            head,
         }
     }
 
@@ -69,7 +68,7 @@ impl VRegSet {
 pub struct VRegSetIter<'a> {
     curr_item: VRegIndex,
     head: VRegIndex,
-    items: &'a [VRegNode],
+    items: &'a ChunkedVec<VRegNode>,
 }
 
 impl<'a> Iterator for VRegSetIter<'a> {

@@ -16,9 +16,11 @@ use core::fmt;
 use core::iter::FromIterator;
 use core::ops::{BitAnd, BitOr, Deref, DerefMut, Index, IndexMut, Not};
 
+mod chunked_vec;
 mod iter;
 mod lru;
 mod vregset;
+use chunked_vec::ChunkedVec;
 use iter::*;
 use lru::*;
 use vregset::VRegSet;
@@ -128,10 +130,10 @@ pub struct State<'a, F: Function> {
     /// operands
     num_available_pregs: PartedByExclusiveOperandPos<PartedByRegClass<i16>>,
     /// The current allocations for all virtual registers.
-    vreg_allocs: Vec<Allocation>,
+    vreg_allocs: ChunkedVec<Allocation>,
     /// Spillslots for all virtual registers.
     /// `vreg_spillslots[i]` is the spillslot for virtual register `i`.
-    vreg_spillslots: Vec<SpillSlot>,
+    vreg_spillslots: ChunkedVec<SpillSlot>,
     /// `vreg_in_preg[i]` is the virtual register currently in the physical register
     /// with index `i`.
     vreg_in_preg: Vec<VReg>,
@@ -537,8 +539,14 @@ impl<'a, F: Function> Env<'a, F> {
                 lrus: Lrus::new(&regs[0], &regs[1], &regs[2]),
                 vreg_in_preg: vec![VReg::invalid(); PReg::NUM_INDEX],
                 stack: Stack::new(func),
-                vreg_allocs: vec![Allocation::none(); func.num_vregs()],
-                vreg_spillslots: vec![SpillSlot::invalid(); func.num_vregs()],
+                vreg_allocs: ChunkedVec::with_capacity_and_default(
+                    func.num_vregs(),
+                    Allocation::none(),
+                ),
+                vreg_spillslots: ChunkedVec::with_capacity_and_default(
+                    func.num_vregs(),
+                    SpillSlot::invalid(),
+                ),
             },
             stats: Stats::default(),
             debug_locations: Vec::with_capacity(func.debug_value_labels().len()),
