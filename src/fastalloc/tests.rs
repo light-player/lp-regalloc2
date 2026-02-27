@@ -38,8 +38,9 @@ fn test_debug_locations1() {
         (v(3), i(3), i(4), 34),
     ];
     let result = run(&f, &mach_env, &options).unwrap();
+    let got: Vec<_> = result.debug_locations.iter().cloned().collect();
     assert_eq!(
-        result.debug_locations,
+        got,
         vec![
             (
                 32,

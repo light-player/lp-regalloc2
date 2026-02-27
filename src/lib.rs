@@ -84,7 +84,8 @@ mod ion_stub {
 }
 use alloc::vec::Vec;
 pub use index::{Block, Inst, InstRange};
-pub use lp_collection::{ChunkedHashMap, ChunkedVec};
+pub use lp_collection::ChunkedHashMap;
+pub use lp_collection::ChunkedVec;
 
 pub mod checker;
 
@@ -1490,10 +1491,8 @@ pub enum InstOrEdit<'a> {
 
 /// Iterator over the instructions and edits in a block.
 pub struct OutputIter<'a> {
-    /// List of edits starting at the first for the current block.
-    edits: &'a [(ProgPoint, Edit)],
-
-    /// Remaining instructions in the current block.
+    edits: &'a ChunkedVec<(ProgPoint, Edit)>,
+    edit_start: usize,
     inst_range: InstRange,
 }
 
@@ -1501,17 +1500,15 @@ impl<'a> Iterator for OutputIter<'a> {
     type Item = InstOrEdit<'a>;
 
     fn next(&mut self) -> Option<InstOrEdit<'a>> {
-        // There can't be any edits after the last instruction in a block, so
-        // we don't need to worry about that case.
         if self.inst_range.len() == 0 {
             return None;
         }
 
-        // Return any edits that happen before the next instruction first.
         let next_inst = self.inst_range.first();
-        if let Some((edit, remaining_edits)) = self.edits.split_first() {
+        if self.edit_start < self.edits.len() {
+            let edit = &self.edits[self.edit_start];
             if edit.0 <= ProgPoint::before(next_inst) {
-                self.edits = remaining_edits;
+                self.edit_start += 1;
                 return Some(InstOrEdit::Edit(&edit.1));
             }
         }
@@ -1579,7 +1576,7 @@ pub struct Output {
 
     /// Edits (insertions or removals). Guaranteed to be sorted by
     /// program point.
-    pub edits: Vec<(ProgPoint, Edit)>,
+    pub edits: ChunkedVec<(ProgPoint, Edit)>,
 
     /// Allocations for each operand. Mapping from instruction to
     /// allocations provided by `inst_alloc_offsets` below.
@@ -1594,7 +1591,7 @@ pub struct Output {
     /// (inclusive) to the second (exclusive). Guaranteed to be sorted
     /// by label and program point, and the ranges are guaranteed to
     /// be disjoint.
-    pub debug_locations: Vec<(u32, ProgPoint, ProgPoint, Allocation)>,
+    pub debug_locations: ChunkedVec<(u32, ProgPoint, ProgPoint, Allocation)>,
 
     /// Internal stats from the allocator.
     #[cfg(feature = "ion")]
@@ -1620,23 +1617,19 @@ impl Output {
     pub fn block_insts_and_edits(&self, func: &impl Function, block: Block) -> OutputIter<'_> {
         let inst_range = func.block_insns(block);
 
-        let edit_idx = self
-            .edits
-            .binary_search_by(|&(pos, _)| {
-                // This predicate effectively searches for a point *just* before
-                // the first ProgPoint. This never returns Ordering::Equal, but
-                // binary_search_by returns the index of where it would have
-                // been inserted in Err.
-                if pos < ProgPoint::before(inst_range.first()) {
-                    core::cmp::Ordering::Less
-                } else {
-                    core::cmp::Ordering::Greater
-                }
-            })
-            .unwrap_err();
+        let edit_idx = self.edits.binary_search_by(|(pos, _)| {
+            if *pos < ProgPoint::before(inst_range.first()) {
+                core::cmp::Ordering::Less
+            } else {
+                core::cmp::Ordering::Greater
+            }
+        }).unwrap_err();
 
-        let edits = &self.edits[edit_idx..];
-        OutputIter { inst_range, edits }
+        OutputIter {
+            edits: &self.edits,
+            edit_start: edit_idx,
+            inst_range,
+        }
     }
 }
 

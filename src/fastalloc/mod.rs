@@ -113,7 +113,7 @@ impl<'a, F: Function> Stack<'a, F> {
 pub struct State<'a, F: Function> {
     func: &'a F,
     /// The final output edits.
-    edits: Vec<(ProgPoint, Edit)>,
+    edits: ChunkedVec<(ProgPoint, Edit)>,
     fixed_stack_slots: PRegSet,
     /// The scratch registers being used in the instruction being
     /// currently processed.
@@ -439,7 +439,7 @@ pub struct Env<'a, F: Function> {
     allocs: Allocs,
     state: State<'a, F>,
     stats: Stats,
-    debug_locations: Vec<(u32, ProgPoint, ProgPoint, Allocation)>,
+    debug_locations: ChunkedVec<(u32, ProgPoint, ProgPoint, Allocation)>,
 }
 
 impl<'a, F: Function> Env<'a, F> {
@@ -519,9 +519,8 @@ impl<'a, F: Function> Env<'a, F> {
             allocs,
             state: State {
                 func,
-                // This guess is based on the sightglass benchmarks:
-                // The average number of edits per instruction is 1.
-                edits: Vec::with_capacity(func.num_insts()),
+                // ChunkedVec allocates in small chunks to avoid OOM on large functions.
+                edits: ChunkedVec::new(),
                 fixed_stack_slots,
                 scratch_regs: dedicated_scratch_regs.clone(),
                 dedicated_scratch_regs,
@@ -548,7 +547,7 @@ impl<'a, F: Function> Env<'a, F> {
                 ),
             },
             stats: Stats::default(),
-            debug_locations: Vec::with_capacity(func.debug_value_labels().len()),
+            debug_locations: ChunkedVec::new(),
         }
     }
 

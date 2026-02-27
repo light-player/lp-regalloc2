@@ -14,7 +14,11 @@ description = "Backtracking register allocator inspired from IonMonkey"
 repository = "https://github.com/bytecodealliance/regalloc2"
 
 [dependencies]
+# lp-collection - path and git; uncomment one at a time (or use lp2025 patch for path override)
+# lp-collection - git (default when building standalone / published)
 lp-collection = { git = "https://github.com/light-player/lp-common", branch = "main" }
+# lp-collection - path for local dev when building lp-regalloc2 standalone
+# lp-collection = { path = "../lp-common/lp-collection" }
 log = { version = "0.4.8", default-features = false }
 smallvec = { version = "1.6.1", features = ["union"] }
 rustc-hash = { version = "2.0.0", default-features = false }
@@ -60,4 +64,4 @@ trace-log = []
 fuzzing = ["arbitrary", "arbtest", "checker", "trace-log"]
 
 # Enables serde for exposed types.
-enable-serde = ["serde"]
+enable-serde = ["serde", "lp-collection/serde"]
