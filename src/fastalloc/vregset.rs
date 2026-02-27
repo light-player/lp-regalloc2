@@ -2,7 +2,7 @@ use core::fmt;
 
 use crate::{VReg, VRegIndex};
 
-use crate::chunked_vec::ChunkedVec;
+use crate::ChunkedVec;
 
 #[derive(Clone)]
 struct VRegNode {

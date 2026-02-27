@@ -3,12 +3,12 @@ use crate::ion::Stats;
 #[cfg(not(feature = "ion"))]
 use crate::ion_stub::Stats;
 use crate::moves::{MoveAndScratchResolver, ParallelMoves};
-use crate::{Allocation, RegAllocError, cfg::CFGInfo};
+use crate::{cfg::CFGInfo, Allocation, RegAllocError};
+use crate::{ssa::validate_ssa, Edit, Function, MachineEnv, Output, ProgPoint};
 use crate::{
     AllocationKind, Block, FxHashMap, Inst, InstPosition, Operand, OperandConstraint, OperandKind,
     OperandPos, PReg, PRegSet, RegClass, SpillSlot, VReg,
 };
-use crate::{Edit, Function, MachineEnv, Output, ProgPoint, ssa::validate_ssa};
 use alloc::format;
 use alloc::{vec, vec::Vec};
 use core::convert::TryInto;
@@ -19,7 +19,7 @@ use core::ops::{BitAnd, BitOr, Deref, DerefMut, Index, IndexMut, Not};
 mod iter;
 mod lru;
 mod vregset;
-use crate::chunked_vec::ChunkedVec;
+use crate::ChunkedVec;
 use iter::*;
 use lru::*;
 use vregset::VRegSet;
@@ -1348,7 +1348,8 @@ impl<'a, F: Function> Env<'a, F> {
         );
         trace!(
             "Live registers at the beginning of block {:?}: {:?}",
-            block, self.live_vregs
+            block,
+            self.live_vregs
         );
         trace!(
             "Block params at block {:?} beginning: {:?}",
