@@ -3,12 +3,12 @@ use crate::ion::Stats;
 #[cfg(not(feature = "ion"))]
 use crate::ion_stub::Stats;
 use crate::moves::{MoveAndScratchResolver, ParallelMoves};
-use crate::{cfg::CFGInfo, Allocation, RegAllocError};
-use crate::{ssa::validate_ssa, Edit, Function, MachineEnv, Output, ProgPoint};
+use crate::{Allocation, RegAllocError, cfg::CFGInfo};
 use crate::{
     AllocationKind, Block, FxHashMap, Inst, InstPosition, Operand, OperandConstraint, OperandKind,
     OperandPos, PReg, PRegSet, RegClass, SpillSlot, VReg,
 };
+use crate::{Edit, Function, MachineEnv, Output, ProgPoint, ssa::validate_ssa};
 use alloc::format;
 use alloc::{vec, vec::Vec};
 use core::convert::TryInto;
@@ -624,7 +624,9 @@ impl<'a, F: Function> Env<'a, F> {
                         && self.num_available_pregs[exclusive_pos][op.class()]
                             < self.num_any_reg_ops[exclusive_pos][op.class()]
                     {
-                        trace!("Need more registers to cover all any-reg ops. Going to evict {op} from {preg}");
+                        trace!(
+                            "Need more registers to cover all any-reg ops. Going to evict {op} from {preg}"
+                        );
                         return false;
                     }
                     if !self.available_pregs[op.pos()].contains(preg) {
@@ -873,7 +875,9 @@ impl<'a, F: Function> Env<'a, F> {
             else {
                 trace!("Move reason: Prev allocation doesn't meet constraints");
                 if op.kind() == OperandKind::Def {
-                    trace!("Adding edit from {new_alloc:?} to {curr_alloc:?} after inst {inst:?} for {op}");
+                    trace!(
+                        "Adding edit from {new_alloc:?} to {curr_alloc:?} after inst {inst:?} for {op}"
+                    );
                     self.add_move(inst, new_alloc, curr_alloc, op.class(), InstPosition::After)?;
                 }
                 // Edits for use operands are added later to avoid inserting
@@ -895,7 +899,10 @@ impl<'a, F: Function> Env<'a, F> {
             self.allocs[(inst.index(), op_idx)] = self.vreg_allocs[op.vreg().vreg()];
             if op.constraint() == OperandConstraint::Reg {
                 self.num_any_reg_ops[op.into()][op.class()] -= 1;
-                trace!("{op} is already within constraint. Number of reg-only ops that need to be allocated now: {}", self.num_any_reg_ops[op.into()]);
+                trace!(
+                    "{op} is already within constraint. Number of reg-only ops that need to be allocated now: {}",
+                    self.num_any_reg_ops[op.into()]
+                );
             }
             if let Some(preg) = self.allocs[(inst.index(), op_idx)].as_reg() {
                 if self.allocatable_regs.contains(preg) {
@@ -1304,7 +1311,9 @@ impl<'a, F: Function> Env<'a, F> {
             let curr_alloc = self.vreg_allocs[op.vreg().vreg()];
             let new_alloc = self.allocs[(inst.index(), op_idx)];
             if curr_alloc != new_alloc {
-                trace!("Adding edit from {curr_alloc:?} to {new_alloc:?} before inst {inst:?} for {op}");
+                trace!(
+                    "Adding edit from {curr_alloc:?} to {new_alloc:?} before inst {inst:?} for {op}"
+                );
                 self.add_move(
                     inst,
                     curr_alloc,
@@ -1339,8 +1348,7 @@ impl<'a, F: Function> Env<'a, F> {
         );
         trace!(
             "Live registers at the beginning of block {:?}: {:?}",
-            block,
-            self.live_vregs
+            block, self.live_vregs
         );
         trace!(
             "Block params at block {:?} beginning: {:?}",

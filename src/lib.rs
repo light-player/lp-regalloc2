@@ -44,8 +44,8 @@ use rustc_hash::FxHasher;
 type FxHashMap<K, V> = hashbrown::HashMap<K, V, BuildHasherDefault<FxHasher>>;
 type FxHashSet<V> = hashbrown::HashSet<V, BuildHasherDefault<FxHasher>>;
 
-pub mod chunked_vec;
 pub(crate) mod cfg;
+pub mod chunked_vec;
 pub(crate) mod domtree;
 pub(crate) mod fastalloc;
 pub mod indexset;
@@ -84,8 +84,8 @@ mod ion_stub {
     pub struct Stats;
 }
 use alloc::vec::Vec;
-pub use index::{Block, Inst, InstRange};
 pub use chunked_vec::ChunkedVec;
+pub use index::{Block, Inst, InstRange};
 
 pub mod checker;
 

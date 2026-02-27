@@ -10,7 +10,7 @@ use core::ops::{Index, IndexMut};
 use core::ptr;
 
 /// Chunk size in elements. Keeps each allocation small (~1–2KB typical).
-const CHUNK_SIZE: usize = 64;
+const CHUNK_SIZE: usize = 16;
 
 /// A vector backed by multiple smaller allocations.
 ///
@@ -18,8 +18,7 @@ const CHUNK_SIZE: usize = 64;
 /// peak allocation size and improve success on fragmented heaps.
 /// Provides O(1) index access; indexing assumes uniform layout (chunk i
 /// covers indices i*CHUNK_SIZE..(i+1)*CHUNK_SIZE or to end).
-#[derive(Clone, Default)]
-#[derive(Debug)]
+#[derive(Clone, Default, Debug)]
 pub struct ChunkedVec<T> {
     chunks: Vec<Vec<T>>,
     len: usize,
